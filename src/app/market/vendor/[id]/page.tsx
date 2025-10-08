@@ -17,17 +17,17 @@ type Product = {
   price_cents: number;
 };
 
-function getBaseUrl(): string {
+async function getBaseUrl(): Promise<string> {
   const explicit = process.env.NEXT_PUBLIC_BASE_URL;
   if (explicit) return explicit;
-  const h = headers();
+  const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "https";
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
   return host ? `${proto}://${host}` : "";
 }
 
 async function getData(id: string) {
-  const base = getBaseUrl();
+  const base = await getBaseUrl();
   if (!base) throw new Error("Could not determine base URL");
   const [prodsRes, vendorsRes] = await Promise.all([
     fetch(`${base}/api/market/products`, { cache: "no-store" }),
