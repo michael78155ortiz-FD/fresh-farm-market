@@ -4,17 +4,18 @@ import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE!);
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-// Next.js 15: params is async (Promise). Await it before use.
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params; // ✅ await the params!
+    const { id } = await params;
 
-    // 1) Load the order (need line_items to restock)
     const { data: order, error } = await supabase
       .from("orders")
       .select("id, stripe_session_id, payment_intent_id, status, line_items")
@@ -25,7 +26,6 @@ export async function POST(
       return NextResponse.json({ ok: false, error: "Order not found" }, { status: 404 });
     }
 
-    // 2) Ensure we have a Payment Intent id (pi_...)
     let piId: string | null = order.payment_intent_id;
     if (!piId && order.stripe_session_id) {
       const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
@@ -35,6 +35,7 @@ export async function POST(
         piId = session.payment_intent.id;
       }
     }
+
     if (!piId) {
       return NextResponse.json(
         { ok: false, error: "No payment_intent found for this order" },
@@ -42,16 +43,13 @@ export async function POST(
       );
     }
 
-    // 3) Create the refund in Stripe
     const refund = await stripe.refunds.create({ payment_intent: piId });
 
-    // 4) Restock each product (uses RPC: increment_inventory)
     const items: Array<{ product_id?: string | null; quantity?: number | null }> = order.line_items || [];
     for (const li of items) {
       const pid = li.product_id;
       const qty = li.quantity || 0;
       if (!pid || !qty) continue;
-
       const { error: upErr } = await supabase.rpc("increment_inventory", {
         p_product_id: pid,
         p_qty: qty,
@@ -61,7 +59,6 @@ export async function POST(
       }
     }
 
-    // 5) Mark order as refunded
     await supabase
       .from("orders")
       .update({ status: "refunded", refund_id: refund.id, refunded_at: new Date().toISOString() })

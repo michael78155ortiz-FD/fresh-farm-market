@@ -6,8 +6,8 @@ import { sendOrderReceipt } from "@/lib/email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export async function POST(req: NextRequest) {
@@ -23,7 +23,6 @@ export async function POST(req: NextRequest) {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       
-      // Get payment intent ID
       let paymentIntentId: string | null = null;
       if (typeof session.payment_intent === "string") {
         paymentIntentId = session.payment_intent;
@@ -38,7 +37,6 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Build line items
       const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
         limit: 100,
       });
@@ -52,7 +50,6 @@ export async function POST(req: NextRequest) {
 
       const currency = (session.currency || "usd").toUpperCase();
 
-      // Save order to database
       const { data: savedOrder, error } = await supabase
         .from("orders")
         .insert({
@@ -74,7 +71,6 @@ export async function POST(req: NextRequest) {
 
       console.log("💾 Order saved successfully!");
 
-      // 📧 SEND EMAIL RECEIPT
       try {
         const customerEmail = session.customer_details?.email || session.customer_email;
         
@@ -99,7 +95,6 @@ export async function POST(req: NextRequest) {
         }
       } catch (emailError) {
         console.error("❌ Email send failed (non-critical):", emailError);
-        // Don't fail the webhook if email fails
       }
     }
 
