@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/request";
+import type { NextRequest } from "next/server";
 
 export const config = { 
   matcher: ["/admin/:path*"] 
@@ -8,7 +8,7 @@ export const config = {
 export function middleware(req: NextRequest) {
   const user = process.env.ADMIN_BASIC_USER || "";
   const pass = process.env.ADMIN_BASIC_PASS || "";
-
+  
   if (!user || !pass) {
     return NextResponse.json({ error: "Admin not configured" }, { status: 500 });
   }
