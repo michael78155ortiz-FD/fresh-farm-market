@@ -1,13 +1,30 @@
-export const metadata = {
-  title: "Fresh Farm Live",
-  description: "Connect with local vendors and live experiences",
-  icons: { icon: "/favicon.svg" }, // tells Next to use your SVG, not /favicon.ico
+// src/app/layout.tsx
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { CartProvider } from "@/components/cart/CartProvider";
+import SiteHeader from "@/components/SiteHeader";
+
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "Fresh Farm Market",
+  description: "Local farm-fresh produce delivered to your door",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className="bg-black">{children}</body>
+      <body className={inter.className}>
+        <CartProvider>
+          <SiteHeader />
+          {children}
+        </CartProvider>
+      </body>
     </html>
   );
 }

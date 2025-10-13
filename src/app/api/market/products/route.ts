@@ -1,47 +1,37 @@
-import { createClient } from '@supabase/supabase-js';
+// src/app/api/market/products/route.ts
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-export const runtime = 'nodejs'; // be explicit
+export const runtime = "nodejs";
 
-export async function GET(req: Request) {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+export async function GET(request: Request) {
   try {
-    const url =
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      process.env.SUPABASE_URL || '';
-    const anon =
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.SUPABASE_ANON_KEY || '';
+    const { searchParams } = new URL(request.url);
+    const vendorId = searchParams.get("vendor_id");
 
-    if (!url || !anon) {
-      return new Response(
-        JSON.stringify({ ok: false, error: 'Supabase env missing: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY' }),
-        { status: 500, headers: { 'content-type': 'application/json' } }
-      );
-    }
+    let query = supabase
+      .from("products")
+      .select("id,name,price_cents,inventory,image_url,vendor_id,is_active")
+      .eq("is_active", true)
+      .order("name", { ascending: true });
 
-    const supabase = createClient(url, anon, { auth: { persistSession: false } });
+    if (vendorId) query = query.eq("vendor_id", vendorId);
 
-    const { data, error } = await supabase
-      .from('products')           // <-- ensure this table exists
-      .select('*')
-      .limit(50);
+    const { data, error } = await query;
 
     if (error) {
-      console.error('products route query error:', error);
-      return new Response(
-        JSON.stringify({ ok: false, error: error.message }),
-        { status: 500, headers: { 'content-type': 'application/json' } }
-      );
+      console.error("Supabase products load error:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return new Response(JSON.stringify({ ok: true, data }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' }
-    });
-  } catch (err: any) {
-    console.error('products route fatal error:', err);
-    return new Response(
-      JSON.stringify({ ok: false, error: err?.message || 'Internal Server Error' }),
-      { status: 500, headers: { 'content-type': 'application/json' } }
-    );
+    return NextResponse.json(data ?? []);
+  } catch (e: any) {
+    console.error("products route crash:", e);
+    return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
   }
 }

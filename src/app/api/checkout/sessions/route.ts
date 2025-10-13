@@ -1,0 +1,83 @@
+// src/app/api/checkout/sessions/route.ts
+import { NextResponse } from "next/server";
+import Stripe from "stripe";
+import { supabaseServer } from "@/lib/supabaseServer";
+
+export const runtime = "nodejs";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  // Match your installed @stripe/stripe-js types expectation
+  apiVersion: "2025-09-30.clover",
+});
+
+type CartItem = {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  quantity: number;
+  // FRONTEND can send either; server will prefer price_cents
+  price_cents?: number; // amount in cents
+  price?: number;       // legacy, in cents
+  currency?: string;    // default usd
+};
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const items: CartItem[] = Array.isArray(body?.items) ? body.items : [];
+
+    if (items.length === 0) {
+      return NextResponse.json({ error: "No items" }, { status: 400 });
+    }
+
+    // (Optional) validate items against DB (ensures correct price & stock)
+    // You can expand this later; for now we just build line items.
+    const currency = (items[0]?.currency || "usd").toLowerCase();
+
+    const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map(
+      (i) => {
+        const unit = Number(
+          i.price_cents ?? i.price ?? 0 // MUST be cents, > 0
+        );
+
+        if (!unit || unit < 1) {
+          throw new Error(
+            `Invalid price for "${i.name}". Each item needs a positive price_cents.`
+          );
+        }
+
+        return {
+          quantity: i.quantity,
+          price_data: {
+            currency,
+            unit_amount: unit,
+            product_data: {
+              name: i.name,
+              images: i.imageUrl ? [i.imageUrl] : [],
+              metadata: { product_id: i.id },
+            },
+          },
+        };
+      }
+    );
+
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items,
+      success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/checkout/cancelled`,
+      metadata: { site: siteUrl },
+    });
+
+    return NextResponse.json({ url: session.url, id: session.id });
+  } catch (e: any) {
+    console.error("create session error:", e);
+    return NextResponse.json(
+      { error: e?.message || "Failed to create session" },
+      { status: 500 }
+    );
+  }
+}
