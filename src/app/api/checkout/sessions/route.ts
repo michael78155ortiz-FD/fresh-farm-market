@@ -1,7 +1,8 @@
 // src/app/api/checkout/sessions/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { checkoutRateLimit } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,18 @@ type CartItem = {
   currency?: string;    // default usd
 };
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Rate limit check
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "anonymous";
+  const { success } = await checkoutRateLimit.limit(ip);
+  
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = await req.json().catch(() => ({}));
     const items: CartItem[] = Array.isArray(body?.items) ? body.items : [];

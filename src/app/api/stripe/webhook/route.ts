@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendOrderReceipt } from "@/lib/email";
+import { webhookRateLimit } from "@/lib/ratelimit";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -12,6 +13,18 @@ const supabase = createClient(
 );
 
 export async function POST(req: NextRequest) {
+  // Rate limit check
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "anonymous";
+  const { success } = await webhookRateLimit.limit(ip);
+  
+  if (!success) {
+    console.warn("⚠️ Webhook rate limit exceeded from IP:", ip);
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429 }
+    );
+  }
+
   try {
     const sig = req.headers.get("stripe-signature")!;
     const rawBody = await req.text();
