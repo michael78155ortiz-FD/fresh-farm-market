@@ -53,67 +53,120 @@ export default async function VendorPage({
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-6">
-        <Link href="/market" className="text-sm text-green-700 hover:underline">
-          ← Back to Market
+        <Link href="/market" className="inline-flex items-center text-sm font-medium text-green-700 hover:text-green-800 hover:underline">
+          <svg className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Market
         </Link>
       </div>
 
-      <header className="mb-8 flex items-center gap-4">
-        <div className="relative h-16 w-16 overflow-hidden rounded-xl bg-gray-100">
-          <img
-            src={vendor.image_url || "/no-image.png"}
-            alt={vendor.name}
-            className="h-full w-full object-cover"
-          />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold">{vendor.name}</h1>
-          {vendor.category ? <p className="text-sm text-gray-600">{vendor.category}</p> : null}
+      <header className="mb-8 rounded-2xl border bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="relative h-20 w-20 overflow-hidden rounded-xl bg-gradient-to-br from-green-50 to-green-100 shadow-sm">
+            {vendor.image_url ? (
+              <img
+                src={vendor.image_url}
+                alt={vendor.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-4xl">
+                🏪
+              </div>
+            )}
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">{vendor.name}</h1>
+            {vendor.category && (
+              <span className="mt-1 inline-block rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
+                {vendor.category}
+              </span>
+            )}
+          </div>
         </div>
       </header>
 
       {products.length === 0 ? (
-        <p className="rounded-xl border bg-white p-6 text-gray-600">No products yet.</p>
+        <div className="rounded-2xl border bg-white p-12 text-center shadow-sm">
+          <div className="mb-4 text-6xl">📦</div>
+          <p className="text-lg text-gray-600">No products available yet.</p>
+        </div>
       ) : (
-        <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((p) => {
-            const inStock = (p.inventory ?? 0) > 0;
+            const inventory = p.inventory ?? 0;
+            const inStock = inventory > 0;
+            const lowStock = inventory > 0 && inventory <= 5;
+
             return (
-              <li key={p.id} className="rounded-2xl border bg-white p-4">
-                <div className="relative mb-3 h-40 w-full overflow-hidden rounded-xl bg-gray-100">
-                  <img
-                    src={p.image_url || "/no-image.png"}
-                    alt={p.name}
-                    className="h-full w-full object-cover"
+              <div key={p.id} className="group overflow-hidden rounded-2xl border bg-white shadow-sm transition-all hover:shadow-md">
+                {/* Product Image */}
+                <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+                  {p.image_url ? (
+                    <img
+                      src={p.image_url}
+                      alt={p.name}
+                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-6xl">
+                      🥬
+                    </div>
+                  )}
+                  
+                  {/* Stock Badge - Top Right */}
+                  <div className="absolute right-3 top-3">
+                    {!inStock ? (
+                      <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 shadow-sm backdrop-blur-sm">
+                        Sold Out
+                      </span>
+                    ) : lowStock ? (
+                      <span className="animate-pulse rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700 shadow-sm backdrop-blur-sm">
+                        ⚠️ Only {inventory} left!
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 shadow-sm backdrop-blur-sm">
+                        ✓ In Stock
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Product Info */}
+                <div className="p-5">
+                  <div className="mb-3 flex items-start justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 group-hover:text-green-600">
+                      {p.name}
+                    </h3>
+                    <span className="ml-2 text-lg font-bold text-green-700">
+                      {money(p.price_cents)}
+                    </span>
+                  </div>
+
+                  {/* Inventory Count - Bottom */}
+                  {inStock && (
+                    <div className="mb-3 text-sm text-gray-600">
+                      {inventory} {inventory === 1 ? 'unit' : 'units'} available
+                    </div>
+                  )}
+
+                  {/* Add to Cart Button */}
+                  <AddToCartForm
+                    product={{
+                      id: p.id,
+                      name: p.name,
+                      price_cents: p.price_cents,
+                      image_url: p.image_url || "",
+                    }}
+                    inStock={inStock}
+                    vendorId={vendorId}
                   />
                 </div>
-                <div className="mb-1 flex items-center justify-between">
-                  <h3 className="font-medium">{p.name}</h3>
-                  <span className="text-sm text-gray-700">{money(p.price_cents)}</span>
-                </div>
-                <div className="mb-3 text-xs">
-                  {inStock ? (
-                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-700">
-                      In stock: {p.inventory}
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-gray-200 px-2 py-0.5 text-gray-600">Sold out</span>
-                  )}
-                </div>
-                <AddToCartForm
-                  product={{
-                    id: p.id,
-                    name: p.name,
-                    price_cents: p.price_cents,
-                    image_url: p.image_url || "",
-                  }}
-                  inStock={inStock}
-                  vendorId={vendorId}
-                />
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
       )}
     </main>
   );

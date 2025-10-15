@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
 
       const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
         limit: 100,
+        expand: ['data.price.product'], // Expand to get metadata
       });
       
       const items = lineItems.data.map((li) => ({
@@ -60,10 +61,12 @@ export async function POST(req: NextRequest) {
         quantity: li.quantity || 1,
         unit_amount: li.price?.unit_amount ?? 0,
         currency: (li.currency || session.currency || "USD").toUpperCase(),
+        product_id: li.price?.product?.metadata?.product_id || null,
       }));
 
       const currency = (session.currency || "usd").toUpperCase();
 
+      // SAVE ORDER
       const { data: savedOrder, error } = await supabase
         .from("orders")
         .insert({
@@ -85,6 +88,32 @@ export async function POST(req: NextRequest) {
 
       console.log("💾 Order saved successfully!");
 
+      // DECREMENT INVENTORY FOR EACH PRODUCT
+      for (const item of items) {
+        if (item.product_id) {
+          try {
+            const { error: inventoryError } = await supabase.rpc(
+              'decrement_inventory',
+              { 
+                product_id: item.product_id, 
+                quantity: item.quantity 
+              }
+            );
+
+            if (inventoryError) {
+              console.error(`⚠️ Failed to decrement inventory for product ${item.product_id}:`, inventoryError);
+            } else {
+              console.log(`📦 Decremented ${item.quantity} units from product ${item.product_id}`);
+            }
+          } catch (invErr) {
+            console.error(`❌ Inventory decrement error:`, invErr);
+          }
+        } else {
+          console.warn(`⚠️ No product_id found for line item:`, item.description);
+        }
+      }
+
+      // SEND EMAIL RECEIPT
       try {
         const customerEmail = session.customer_details?.email || session.customer_email;
         
