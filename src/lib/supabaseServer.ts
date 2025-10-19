@@ -1,16 +1,55 @@
 // src/lib/supabaseServer.ts
-import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 
-export function supabaseServer() {
-  const url =
-    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const service =
-    process.env.SUPABASE_SERVICE_ROLE ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
+export async function supabaseServer() {
+  const cookieStore = await cookies();
 
-  if (!url) throw new Error("Missing SUPABASE_URL");
-  if (!service) throw new Error("Missing service role key");
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        async get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        async set(name: string, value: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch {}
+        },
+        async remove(name: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value: "", ...options });
+          } catch {}
+        },
+      },
+    }
+  );
+}
 
-  // No auth session persisted on server
-  return createClient(url, service, { auth: { persistSession: false } });
+// Service (server) client with SERVICE ROLE for back-office jobs
+export function supabaseService() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+}
+
+// Helper to fetch session + profile on the server
+export async function getSessionAndProfile() {
+  const supabase = await supabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { session: null, profile: null };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  return { session: user, profile };
 }

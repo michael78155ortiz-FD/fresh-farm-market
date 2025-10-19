@@ -1,0 +1,26 @@
+// src/app/admin/layout.tsx
+import { ReactNode } from "react";
+import { redirect } from "next/navigation";
+import { supabaseServer } from "@/lib/supabase/server";
+
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const supabase = supabaseServer();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) redirect("/auth/sign-in");
+
+  const email = (session.user.email || "").toLowerCase();
+  const allowed = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (!allowed.includes(email)) {
+    // Not an admin → kick them out
+    redirect("/");
+  }
+
+  return <>{children}</>;
+}
