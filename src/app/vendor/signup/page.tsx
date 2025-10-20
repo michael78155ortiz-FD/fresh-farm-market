@@ -17,28 +17,51 @@ export default function VendorSignupPage() {
           <h2 className="text-2xl font-semibold mb-6">Why sell with us?</h2>
 
           <div className="space-y-4 mb-8">
-            {[
-              ["Low Commission Rates", "Keep more of what you earn."],
-              ["Direct Customer Access", "Shoppers who love local produce."],
-              ["Easy Setup", "Open your shop in minutes."],
-              ["Weekly Payouts", "Fast, reliable payments."],
-            ].map(([title, desc]) => (
-              <div key={title} className="flex items-start">
-                <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-4">
-                  <span className="text-green-600 font-bold">✓</span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">{title}</h3>
-                  <p className="text-gray-600">{desc}</p>
-                </div>
+            <div className="flex items-start">
+              <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                <span className="text-green-600 font-bold">✓</span>
               </div>
-            ))}
+              <div>
+                <h3 className="font-semibold text-gray-900">Low Commission Rates</h3>
+                <p className="text-gray-600">Keep more of what you earn.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start">
+              <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                <span className="text-green-600 font-bold">✓</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Direct Customer Access</h3>
+                <p className="text-gray-600">Shoppers who love local produce.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start">
+              <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                <span className="text-green-600 font-bold">✓</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Easy Setup</h3>
+                <p className="text-gray-600">Open your shop in minutes.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start">
+              <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                <span className="text-green-600 font-bold">✓</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Weekly Payouts</h3>
+                <p className="text-gray-600">Fast, reliable payments.</p>
+              </div>
+            </div>
           </div>
 
           <div className="border-t pt-6">
             <h3 className="text-lg font-semibold mb-4">Ready to get started?</h3>
             <p className="text-gray-600 mb-6">
-              Email us and we'll guide you through your vendor application.
+              Email us and we will guide you through your vendor application.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
