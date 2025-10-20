@@ -65,7 +65,12 @@ export default function VendorSignupPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <a href="mailto:vendors@freshfarmmarket.com?subject=Vendor Application" className="text-white flex-1 bg-green-600 px-6 py-3 rounded-lg font-semibold text-center hover:bg-green-700 transition">
+              <a 
+                href="mailto:vendors@freshfarmmarket.com?subject=Vendor Application" 
+                style={{backgroundColor: '#16a34a', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.5rem', fontWeight: 600, textAlign: 'center', textDecoration: 'none', display: 'block', transition: 'background-color 0.2s'}}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
+              >
                 Email Us to Apply
               </a>
               <a href="tel:+1-555-0123" className="flex-1 bg-gray-100 text-gray-900 px-6 py-3 rounded-lg font-semibold text-center hover:bg-gray-200 transition border border-gray-300">
