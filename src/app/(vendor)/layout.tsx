@@ -1,4 +1,4 @@
-import { CartProvider } from "@/lib/context/CartContext";
+import { CartProvider } from "@/components/cart/CartProvider";
 
 export default function VendorLayout({
   children,
