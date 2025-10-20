@@ -1,15 +1,10 @@
-// src/app/layout.tsx
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-import { CartProvider } from "@/components/cart/CartProvider";
-import SiteHeader from "@/components/SiteHeader";
-
-const inter = Inter({ subsets: ["latin"] });
+import type { Metadata } from "next";
+import Header from "@/components/Header";
 
 export const metadata: Metadata = {
-  title: "Fresh Farm Market",
-  description: "Local farm-fresh produce delivered to your door",
+  title: "Fresh Farm",
+  description: "Local market",
 };
 
 export default function RootLayout({
@@ -19,11 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <CartProvider>
-          <SiteHeader />
-          {children}
-        </CartProvider>
+      <body className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
       </body>
     </html>
   );

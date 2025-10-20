@@ -29,7 +29,7 @@ export default function SiteHeader() {
             Sign in
           </Link>
           <Link
-            href="/vendor/onboarding"
+            href="/vendor/signup"
             className="px-3 py-2 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700"
           >
             Become a vendor
