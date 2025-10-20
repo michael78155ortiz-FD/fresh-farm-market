@@ -65,17 +65,10 @@ export default function VendorSignupPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              
-                href="mailto:vendors@freshfarmmarket.com"
-                className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold text-center hover:bg-green-700 transition"
-              >
+              <a href="mailto:vendors@freshfarmmarket.com" className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold text-center hover:bg-green-700 transition">
                 Email Us
               </a>
-
-              <Link
-                href="/auth/sign-in"
-                className="flex-1 bg-gray-100 text-gray-900 px-6 py-3 rounded-lg font-semibold text-center hover:bg-gray-200 transition"
-              >
+              <Link href="/auth/sign-in" className="flex-1 bg-gray-100 text-gray-900 px-6 py-3 rounded-lg font-semibold text-center hover:bg-gray-200 transition">
                 Sign in / Create Account
               </Link>
             </div>
@@ -84,7 +77,7 @@ export default function VendorSignupPage() {
 
         <div className="text-center">
           <Link href="/" className="text-green-600 hover:text-green-700 font-medium">
-            ← Back to Home
+            Back to Home
           </Link>
         </div>
       </div>
