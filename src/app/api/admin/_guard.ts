@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export async function requireAdmin() {
-  const supabase = supabaseServer();
+  const supabase = await supabaseServer();
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -22,6 +22,6 @@ export async function requireAdmin() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Returning null means “all good”
+  // Returning null means "all good"
   return null as NextResponse | null;
 }
