@@ -1,5 +1,4 @@
 /* src/app/globals.css */
-
 /* ✅ v4 way */
 @import "tailwindcss";
 
@@ -13,12 +12,14 @@ html, body {
                "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
 
-/* Links */
-a {
+/* Links - but NOT button-styled links */
+a:not(.btn):not([class*="bg-"]) {
   color: #16a34a;            /* green-600 */
   text-decoration: none;
 }
-a:hover { text-decoration: underline; }
+a:not(.btn):not([class*="bg-"]):hover { 
+  text-decoration: underline; 
+}
 
 /* Buttons */
 button {
