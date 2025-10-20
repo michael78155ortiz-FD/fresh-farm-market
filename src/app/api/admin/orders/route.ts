@@ -1,12 +1,12 @@
 // src/app/api/admin/orders/route.ts
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabaseServer";
+import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const supabase = supabaseServer();
+    const supabase = await supabaseServer();
 
     const { data, error } = await supabase
       .from("orders")
