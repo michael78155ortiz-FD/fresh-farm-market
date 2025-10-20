@@ -61,23 +61,27 @@ export default function VendorSignupPage() {
           <div className="border-t pt-6">
             <h3 className="text-lg font-semibold mb-4">Ready to get started?</h3>
             <p className="text-gray-600 mb-6">
-              Email us and we will guide you through your vendor application.
+              Contact us to begin your vendor journey. We will guide you through the setup process and answer any questions.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <a href="mailto:vendors@freshfarmmarket.com" className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold text-center hover:bg-green-700 transition">
-                Email Us
+              <a href="mailto:vendors@freshfarmmarket.com?subject=Vendor Application" className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold text-center hover:bg-green-700 transition">
+                Email Us to Apply
               </a>
-              <Link href="/auth/sign-in" className="flex-1 bg-gray-100 text-gray-900 px-6 py-3 rounded-lg font-semibold text-center hover:bg-gray-200 transition">
-                Sign in / Create Account
-              </Link>
+              <a href="tel:+1-555-0123" className="flex-1 bg-gray-100 text-gray-900 px-6 py-3 rounded-lg font-semibold text-center hover:bg-gray-200 transition border border-gray-300">
+                Call: (555) 012-3456
+              </a>
             </div>
+
+            <p className="text-sm text-gray-500 text-center mt-4">
+              Already a vendor? <Link href="/auth/sign-in" className="text-green-600 hover:text-green-700 font-medium">Sign in here</Link>
+            </p>
           </div>
         </div>
 
         <div className="text-center">
           <Link href="/" className="text-green-600 hover:text-green-700 font-medium">
-            Back to Home
+            ← Back to Home
           </Link>
         </div>
       </div>
