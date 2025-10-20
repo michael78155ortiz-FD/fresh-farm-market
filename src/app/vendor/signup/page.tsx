@@ -65,8 +65,8 @@ export default function VendorSignupPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <a href="mailto:vendors@freshfarmmarket.com?subject=Vendor Application" className="flex-1 bg-green-600 px-6 py-3 rounded-lg font-semibold text-center hover:bg-green-700 transition" style={{color: '#ffffff'}}>
-                Email Us to Apply
+              <a href="mailto:vendors@freshfarmmarket.com?subject=Vendor Application" className="flex-1 bg-green-600 px-6 py-3 rounded-lg font-semibold text-center hover:bg-green-700 transition">
+                <span style={{color: 'white', display: 'block'}}>Email Us to Apply</span>
               </a>
               <a href="tel:+1-555-0123" className="flex-1 bg-gray-100 text-gray-900 px-6 py-3 rounded-lg font-semibold text-center hover:bg-gray-200 transition border border-gray-300">
                 Call: (555) 012-3456
