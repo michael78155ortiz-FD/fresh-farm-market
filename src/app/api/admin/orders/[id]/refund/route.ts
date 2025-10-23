@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
+// Tell Next.js this is a dynamic route
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,7 +19,6 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-
     const { data: order, error } = await supabase
       .from("orders")
       .select("id, stripe_session_id, payment_intent_id, status, line_items")
