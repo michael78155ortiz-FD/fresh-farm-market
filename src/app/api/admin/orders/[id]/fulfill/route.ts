@@ -1,23 +1,24 @@
-// src/app/api/admin/orders/[id]/fulfill/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getAdminSupabase } from "@/lib/supabaseAdmin";
 
-// Tell Next.js this is a dynamic route
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = getAdminSupabase();
+    if (!supabase) {
+      return NextResponse.json(
+        { ok: false, error: "Server configuration error" },
+        { status: 500 }
+      );
+    }
+
     const { id } = await params;
-    
+
     const { data: order, error } = await supabase
       .from("orders")
       .select("*")
@@ -28,13 +29,14 @@ export async function POST(
       return NextResponse.json({ ok: false, error: "Order not found" }, { status: 404 });
     }
 
-    await supabase
+    const { error: updErr } = await supabase
       .from("orders")
-      .update({ 
-        status: "fulfilled", 
-        fulfilled_at: new Date().toISOString() 
-      })
+      .update({ status: "fulfilled", fulfilled_at: new Date().toISOString() })
       .eq("id", id);
+
+    if (updErr) {
+      return NextResponse.json({ ok: false, error: "Update failed" }, { status: 500 });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {

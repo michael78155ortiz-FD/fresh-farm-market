@@ -1,13 +1,22 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+let cached: SupabaseClient | null = null;
 
 /**
- * Returns a Supabase client that uses the service_role key.
- * Used only for server-side admin routes.
+ * Lazily creates a Supabase service-role client at request time.
+ * Returns null if the env is not configured, so callers can respond 500 gracefully.
  */
-export function supabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE!;
-  if (!url) throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL');
-  if (!key) throw new Error('Missing SUPABASE_SERVICE_ROLE');
-  return createClient(url, key, { auth: { persistSession: false } });
+export function getAdminSupabase(): SupabaseClient | null {
+  // Prefer server env; fall back to NEXT_PUBLIC if your project only exposes that
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) return null;
+
+  if (!cached) {
+    cached = createClient(url, key, {
+      auth: { persistSession: false },
+    });
+  }
+  return cached;
 }

@@ -1,24 +1,28 @@
-// src/app/api/admin/orders/[id]/refund/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import { getAdminSupabase } from "@/lib/supabaseAdmin";
 
-// Tell Next.js this is a dynamic route
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    const supabase = getAdminSupabase();
+
+    if (!stripeKey || !supabase) {
+      return NextResponse.json(
+        { ok: false, error: "Server configuration error" },
+        { status: 500 }
+      );
+    }
+
+    const stripe = new Stripe(stripeKey);
     const { id } = await params;
+
     const { data: order, error } = await supabase
       .from("orders")
       .select("id, stripe_session_id, payment_intent_id, status, line_items")
@@ -29,14 +33,13 @@ export async function POST(
       return NextResponse.json({ ok: false, error: "Order not found" }, { status: 404 });
     }
 
+    // Resolve the payment intent
     let piId: string | null = order.payment_intent_id;
     if (!piId && order.stripe_session_id) {
       const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
-      if (typeof session.payment_intent === "string") {
-        piId = session.payment_intent;
-      } else if (session.payment_intent?.id) {
-        piId = session.payment_intent.id;
-      }
+      const pi = session.payment_intent;
+      if (typeof pi === "string") piId = pi;
+      else if (pi && typeof pi === "object" && "id" in pi) piId = (pi as any).id;
     }
 
     if (!piId) {
@@ -48,6 +51,7 @@ export async function POST(
 
     const refund = await stripe.refunds.create({ payment_intent: piId });
 
+    // Restock inventory best-effort
     const items: Array<{ product_id?: string | null; quantity?: number | null }> = order.line_items || [];
     for (const li of items) {
       const pid = li.product_id;
@@ -57,15 +61,17 @@ export async function POST(
         p_product_id: pid,
         p_qty: qty,
       });
-      if (upErr) {
-        console.error("Restock RPC failed (increment_inventory)", upErr);
-      }
+      if (upErr) console.error("Restock RPC failed (increment_inventory)", upErr);
     }
 
-    await supabase
+    const { error: updErr } = await supabase
       .from("orders")
       .update({ status: "refunded", refund_id: refund.id, refunded_at: new Date().toISOString() })
       .eq("id", order.id);
+
+    if (updErr) {
+      return NextResponse.json({ ok: false, error: "Update failed" }, { status: 500 });
+    }
 
     return NextResponse.json({ ok: true, refund_id: refund.id });
   } catch (e: any) {
