@@ -61,19 +61,20 @@ export default function VendorSignupPage() {
           <div className="border-t pt-6">
             <h3 className="text-lg font-semibold mb-4">Ready to get started?</h3>
             <p className="text-gray-600 mb-6">
-              Contact us to begin your vendor journey.
+              Contact us to begin your vendor journey. We will guide you through the setup process and answer any questions.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
               <a 
                 href="mailto:vendors@freshfarmmarket.com?subject=Vendor Application" 
-                style={{backgroundColor: '#16a34a', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.5rem', fontWeight: 600, textAlign: 'center', textDecoration: 'none', display: 'block', transition: 'background-color 0.2s'}}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold text-center transition-colors"
               >
                 Email Us to Apply
               </a>
-              <a href="tel:+1-555-0123" className="flex-1 bg-gray-100 text-gray-900 px-6 py-3 rounded-lg font-semibold text-center hover:bg-gray-200 transition border border-gray-300">
+              <a 
+                href="tel:+1-555-0123" 
+                className="flex-1 bg-gray-100 text-gray-900 px-6 py-3 rounded-lg font-semibold text-center hover:bg-gray-200 transition-colors border border-gray-300"
+              >
                 Call: (555) 012-3456
               </a>
             </div>

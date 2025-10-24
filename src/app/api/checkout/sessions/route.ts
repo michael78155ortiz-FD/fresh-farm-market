@@ -1,63 +1,64 @@
 // src/app/api/checkout/sessions/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { supabaseServer } from "@/lib/supabaseServer";
 import { checkoutRateLimit } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  // Match your installed @stripe/stripe-js types expectation
-  apiVersion: "2025-09-30.clover",
-});
+export const dynamic = "force-dynamic";
 
 type CartItem = {
   id: string;
   name: string;
   imageUrl?: string;
   quantity: number;
-  // FRONTEND can send either; server will prefer price_cents
-  price_cents?: number; // amount in cents
-  price?: number;       // legacy, in cents
-  currency?: string;    // default usd
+  price_cents?: number;
+  price?: number;
+  currency?: string;
 };
 
 export async function POST(req: NextRequest) {
-  // Rate limit check
-  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "anonymous";
-  const { success } = await checkoutRateLimit.limit(ip);
-  
-  if (!success) {
-    return NextResponse.json(
-      { error: "Too many requests. Please try again later." },
-      { status: 429 }
-    );
-  }
-
   try {
+    // Check env at runtime
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeKey) {
+      return NextResponse.json(
+        { error: "Server configuration error" },
+        { status: 500 }
+      );
+    }
+
+    // Create Stripe client at runtime
+    const stripe = new Stripe(stripeKey, {
+      apiVersion: "2024-06-20" as any,
+    });
+
+    // Rate limit check
+    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "anonymous";
+    const { success } = await checkoutRateLimit.limit(ip);
+    
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     const items: CartItem[] = Array.isArray(body?.items) ? body.items : [];
-
+    
     if (items.length === 0) {
       return NextResponse.json({ error: "No items" }, { status: 400 });
     }
 
-    // (Optional) validate items against DB (ensures correct price & stock)
-    // You can expand this later; for now we just build line items.
     const currency = (items[0]?.currency || "usd").toLowerCase();
-
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map(
       (i) => {
-        const unit = Number(
-          i.price_cents ?? i.price ?? 0 // MUST be cents, > 0
-        );
-
+        const unit = Number(i.price_cents ?? i.price ?? 0);
         if (!unit || unit < 1) {
           throw new Error(
             `Invalid price for "${i.name}". Each item needs a positive price_cents.`
           );
         }
-
         return {
           quantity: i.quantity,
           price_data: {
@@ -73,9 +74,8 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    const siteUrl =
-      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items,

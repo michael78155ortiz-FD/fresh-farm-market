@@ -1,26 +1,49 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
+import { getAdminSupabase } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
-
-const sb = () =>
-  createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
+export const dynamic = "force-dynamic";
 
 export async function POST(
-  _req: Request,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  
-  const { error } = await sb()
-    .from("orders")
-    .update({ status: "fulfilled" })
-    .eq("id", id);
+  try {
+    const supabase = getAdminSupabase();
+    if (!supabase) {
+      return NextResponse.json(
+        { ok: false, error: "Server configuration error" },
+        { status: 500 }
+      );
+    }
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+    const { id } = await params;
+
+    const { data: order, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error || !order) {
+      return NextResponse.json({ ok: false, error: "Order not found" }, { status: 404 });
+    }
+
+    const { error: updErr } = await supabase
+      .from("orders")
+      .update({ status: "fulfilled", fulfilled_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (updErr) {
+      return NextResponse.json({ ok: false, error: "Update failed" }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    console.error("Fulfill error:", e);
+    return NextResponse.json(
+      { ok: false, error: e?.message || "Fulfill failed" },
+      { status: 500 }
+    );
+  }
 }

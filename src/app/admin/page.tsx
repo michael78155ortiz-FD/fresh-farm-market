@@ -1,7 +1,8 @@
 // src/app/admin/page.tsx
 import Link from "next/link";
 
-export const dynamic = "force-static"; // no data fetching needed
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export default function AdminHome() {
   const cards = [
@@ -21,7 +22,7 @@ export default function AdminHome() {
       desc: "Back to the site homepage.",
     },
   ];
-
+  
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
       <header className="mb-8">
@@ -30,7 +31,6 @@ export default function AdminHome() {
           Quick links to manage your store.
         </p>
       </header>
-
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <Link
@@ -46,7 +46,6 @@ export default function AdminHome() {
           </Link>
         ))}
       </section>
-
       <footer className="mt-10 text-xs text-gray-500">
         Tip: If you protected /admin with a password (middleware), you can open this
         page with <code className="rounded bg-gray-100 px-1">?pass=supersecret</code>.

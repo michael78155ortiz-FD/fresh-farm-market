@@ -1,158 +1,74 @@
-// src/app/api/webhooks/stripe/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
-import { sendOrderReceipt } from "@/lib/email";
-import { webhookRateLimit } from "@/lib/ratelimit";
+import { getAdminSupabase } from "@/lib/supabaseAdmin";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
-  // Rate limit check
-  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "anonymous";
-  const { success } = await webhookRateLimit.limit(ip);
-  
-  if (!success) {
-    console.warn("⚠️ Webhook rate limit exceeded from IP:", ip);
-    return NextResponse.json(
-      { error: "Too many requests" },
-      { status: 429 }
-    );
-  }
-
   try {
-    const sig = req.headers.get("stripe-signature")!;
-    const rawBody = await req.text();
-    const event = stripe.webhooks.constructEvent(
-      rawBody,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const supabase = getAdminSupabase();
 
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object as Stripe.Checkout.Session;
-      
-      let paymentIntentId: string | null = null;
-      if (typeof session.payment_intent === "string") {
-        paymentIntentId = session.payment_intent;
-      } else if (session.payment_intent?.id) {
-        paymentIntentId = session.payment_intent.id;
-      } else {
-        const s = await stripe.checkout.sessions.retrieve(session.id);
-        if (typeof s.payment_intent === "string") {
-          paymentIntentId = s.payment_intent;
-        } else if (s.payment_intent?.id) {
-          paymentIntentId = s.payment_intent.id;
-        }
-      }
-
-      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
-        limit: 100,
-        expand: ['data.price.product'],
-      });
-      
-      const items = lineItems.data.map((li) => {
-        let productId: string | null = null;
-        
-        // Type guard to check if product is an object with metadata
-        if (li.price?.product && typeof li.price.product === 'object' && 'metadata' in li.price.product) {
-          productId = li.price.product.metadata?.product_id || null;
-        }
-        
-        return {
-          description: li.description || "",
-          quantity: li.quantity || 1,
-          unit_amount: li.price?.unit_amount ?? 0,
-          currency: (li.currency || session.currency || "USD").toUpperCase(),
-          product_id: productId,
-        };
-      });
-
-      const currency = (session.currency || "usd").toUpperCase();
-
-      // SAVE ORDER
-      const { data: savedOrder, error } = await supabase
-        .from("orders")
-        .insert({
-          stripe_session_id: session.id,
-          payment_intent_id: paymentIntentId,
-          amount_total_cents: session.amount_total ?? 0,
-          currency,
-          customer_email: session.customer_details?.email ?? null,
-          line_items: items,
-          status: "paid",
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("✗ Supabase insert error:", error);
-        return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-      }
-
-      console.log("💾 Order saved successfully!");
-
-      // DECREMENT INVENTORY FOR EACH PRODUCT
-      for (const item of items) {
-        if (item.product_id) {
-          try {
-            const { error: inventoryError } = await supabase.rpc(
-              'decrement_inventory',
-              { 
-                product_id: item.product_id, 
-                quantity: item.quantity 
-              }
-            );
-
-            if (inventoryError) {
-              console.error(`⚠️ Failed to decrement inventory for product ${item.product_id}:`, inventoryError);
-            } else {
-              console.log(`📦 Decremented ${item.quantity} units from product ${item.product_id}`);
-            }
-          } catch (invErr) {
-            console.error(`❌ Inventory decrement error:`, invErr);
-          }
-        } else {
-          console.warn(`⚠️ No product_id found for line item:`, item.description);
-        }
-      }
-
-      // SEND EMAIL RECEIPT
-      try {
-        const customerEmail = session.customer_details?.email || session.customer_email;
-        
-        if (customerEmail) {
-          const receiptLines = items.map((item) => ({
-            name: item.description || "Item",
-            quantity: item.quantity,
-            amount_cents: item.unit_amount * item.quantity,
-          }));
-
-          await sendOrderReceipt({
-            to: customerEmail,
-            orderId: savedOrder.id,
-            amount_cents: session.amount_total ?? 0,
-            currency: currency,
-            lines: receiptLines,
-          });
-          
-          console.log("📧 Receipt email sent to:", customerEmail);
-        } else {
-          console.log("⚠️ No customer email - skipped receipt");
-        }
-      } catch (emailError) {
-        console.error("❌ Email send failed (non-critical):", emailError);
-      }
+    if (!stripeKey || !webhookSecret || !supabase) {
+      return NextResponse.json(
+        { ok: false, error: "Server configuration error" },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ received: true }, { status: 200 });
-  } catch (err: any) {
-    console.error("Webhook error:", err);
-    return NextResponse.json({ error: "Webhook handler failed" }, { status: 400 });
+    const stripe = new Stripe(stripeKey);
+    const body = await req.text();
+    const sig = req.headers.get('stripe-signature');
+
+    if (!sig) {
+      return NextResponse.json(
+        { ok: false, error: "Missing signature" },
+        { status: 400 }
+      );
+    }
+
+    const event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+
+    // Handle the event
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        
+        // Update order status
+        await supabase
+          .from('orders')
+          .update({ 
+            status: 'paid',
+            payment_intent_id: session.payment_intent as string,
+            paid_at: new Date().toISOString()
+          })
+          .eq('stripe_session_id', session.id);
+        break;
+      }
+      
+      case 'payment_intent.payment_failed': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        
+        // Update order status
+        await supabase
+          .from('orders')
+          .update({ status: 'failed' })
+          .eq('payment_intent_id', paymentIntent.id);
+        break;
+      }
+      
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+
+    return NextResponse.json({ ok: true, received: true });
+  } catch (e: any) {
+    console.error('Webhook error:', e);
+    return NextResponse.json(
+      { ok: false, error: e?.message || "Webhook failed" },
+      { status: 400 }
+    );
   }
 }
