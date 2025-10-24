@@ -29,10 +29,14 @@ function money(cents: number) {
     .format(cents / 100);
 }
 
-export default async function VendorPage({ params }: { params: { id: string } }) {
-  const vendorId = params.id;
-  const supabase = getAdminSupabase();
+// Support both Next 14 (sync params) and Next 15 (Promise params)
+type Params = { id: string };
+type Props = { params: Params | Promise<Params> };
 
+export default async function VendorPage({ params }: Props) {
+  const { id: vendorId } = await Promise.resolve(params);
+
+  const supabase = getAdminSupabase();
   if (!supabase) {
     return (
       <main className="mx-auto max-w-7xl px-4 py-8">
