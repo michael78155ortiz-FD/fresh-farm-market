@@ -1,8 +1,11 @@
 import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+cat > "$FILE" <<'TS'
+import { cookies } from 'next/headers';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export async function createClient() {
-  // In Next 15, cookies() is async
+  // In Next 15, cookies() returns a Promise — await it once and reuse
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -14,9 +17,11 @@ export async function createClient() {
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
+          // next/headers cookies are mutable on the server
           cookieStore.set(name, value, options);
         },
         remove(name: string, options: CookieOptions) {
+          // Clear by setting maxAge: 0
           cookieStore.set(name, '', { ...options, maxAge: 0 });
         },
       },

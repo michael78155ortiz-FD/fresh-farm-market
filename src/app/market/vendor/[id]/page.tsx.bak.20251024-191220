@@ -1,0 +1,28 @@
+// NOTE: In Next.js 15 App Router, `params` is a Promise.
+// Don't use PageProps. Type the prop inline as `{ params: Promise<{ id: string }> }`.
+
+import type { Metadata } from "next";
+
+type VendorParams = Promise<{ id: string }>;
+
+export async function generateMetadata(
+  { params }: { params: VendorParams }
+): Promise<Metadata> {
+  const { id } = await params;
+  return { title: `Vendor ${id}` };
+}
+
+export default async function Page(
+  { params }: { params: VendorParams }
+) {
+  const { id } = await params;
+
+  return (
+    <main className="p-6">
+      <h1 className="text-2xl font-semibold">Vendor: {id}</h1>
+      <p className="mt-2 text-sm text-gray-500">
+        Placeholder vendor page (Next.js 15 params Promise fix). Replace with your actual UI.
+      </p>
+    </main>
+  );
+}
