@@ -29,11 +29,12 @@ function money(cents: number) {
     .format(cents / 100);
 }
 
-type Params = { id: string };
-type Props = { params: Params | Promise<Params> };
-
-export default async function VendorPage({ params }: Props) {
-  const { id: vendorId } = await Promise.resolve(params);
+export default async function VendorPage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
+  const { id: vendorId } = await params;
 
   const supabase = getAdminSupabase();
   if (!supabase) {
