@@ -1,34 +1,22 @@
-import { NextResponse } from "next/server";
-import { getAdminSupabase } from "@/lib/supabaseAdmin";
-
-export const dynamic = 'force-dynamic';
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET() {
   try {
-    const supabase = getAdminSupabase();
-    if (!supabase) {
-      return NextResponse.json(
-        { ok: false, error: "Server configuration error" },
-        { status: 500 }
-      );
-    }
+    const supabase = await createClient();
 
+    // TODO: adjust table/columns to your schema if needed
     const { data, error } = await supabase
       .from('vendors')
-      .select('*')
-      .eq('approved', true);
-    
-    if (error) {
-      return NextResponse.json(
-        { ok: false, error: error.message },
-        { status: 500 }
-      );
-    }
-    
-    return NextResponse.json({ ok: true, data });
-  } catch (e: any) {
+      .select('id,name,slug,hero_image_url,status')
+      .eq('status', 'active');
+
+    if (error) throw error;
+    return NextResponse.json({ vendors: data ?? [] }, { status: 200 });
+  } catch (err: any) {
+    console.error('API /api/market/vendors error:', err);
     return NextResponse.json(
-      { ok: false, error: e?.message || "Failed to fetch vendors" },
+      { error: 'Internal error', detail: err?.message ?? String(err) },
       { status: 500 }
     );
   }

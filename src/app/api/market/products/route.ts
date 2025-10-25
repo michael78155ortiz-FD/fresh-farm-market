@@ -1,43 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getAdminSupabase } from "@/lib/supabaseAdmin";
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 
-export const dynamic = 'force-dynamic';
-
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const supabase = getAdminSupabase();
-    if (!supabase) {
-      return NextResponse.json(
-        { ok: false, error: "Server configuration error" },
-        { status: 500 }
-      );
-    }
+    const supabase = await createClient();
 
-    const searchParams = req.nextUrl.searchParams;
-    const vendorId = searchParams.get('vendor_id');
-    
-    let query = supabase
+    // TODO: adjust table/columns to your schema if needed
+    const { data, error } = await supabase
       .from('products')
-      .select('*')
-      .eq('available', true);
-    
-    if (vendorId) {
-      query = query.eq('vendor_id', vendorId);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      return NextResponse.json(
-        { ok: false, error: error.message },
-        { status: 500 }
-      );
-    }
-    
-    return NextResponse.json({ ok: true, data });
-  } catch (e: any) {
+      .select('id,name,price,slug,image_url,is_active')
+      .eq('is_active', true);
+
+    if (error) throw error;
+    return NextResponse.json({ products: data ?? [] }, { status: 200 });
+  } catch (err: any) {
+    console.error('API /api/market/products error:', err);
     return NextResponse.json(
-      { ok: false, error: e?.message || "Failed to fetch products" },
+      { error: 'Internal error', detail: err?.message ?? String(err) },
       { status: 500 }
     );
   }
