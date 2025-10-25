@@ -1,6 +1,5 @@
 // src/app/market/page.tsx
 import Link from "next/link";
-import Image from "next/image";
 import { getAdminSupabase } from "@/lib/supabaseAdmin";
 
 type Vendor = {
@@ -22,8 +21,9 @@ function money(cents: number) {
     .format(cents / 100);
 }
 
-export const revalidate = 0;
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "default-no-store";
 export const runtime = "nodejs";
 
 export default async function MarketPage() {
@@ -41,14 +41,14 @@ export default async function MarketPage() {
 
   const [vendorsResult, productsResult] = await Promise.all([
     supabase.from("vendors").select("*").eq("approved", true),
-    supabase.from("products").select("*").eq("available", true),
+    supabase.from("products").select("*").eq("active", true),
   ]);
 
-  const vendors: Vendor[] = vendorsResult.data || [];
-  const products: Product[] = productsResult.data || [];
+  const vendors: Vendor[] = vendorsResult.data ?? [];
+  const products: Product[] = productsResult.data ?? [];
 
-  const productsByVendor = products.reduce((acc, product) => {
-    (acc[product.vendor_id] ||= []).push(product);
+  const productsByVendor = products.reduce((acc, p) => {
+    (acc[p.vendor_id] ||= []).push(p);
     return acc;
   }, {} as Record<string, Product[]>);
 
@@ -56,7 +56,7 @@ export default async function MarketPage() {
     <main className="mx-auto max-w-7xl px-4 py-8">
       <div className="mb-12 text-center">
         <h1 className="mb-3 text-4xl font-bold text-gray-900">Fresh Farm Market</h1>
-        <p className="text-lg text-gray-600">Local vendors delivering farm-fresh products to your door</p>
+        <p className="text-lg text-gray-600">Local vendors delivering farm-fresh products</p>
       </div>
 
       {vendors.length === 0 ? (
@@ -66,11 +66,8 @@ export default async function MarketPage() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {vendors.map((vendor) => {
-            const vendorProducts = productsByVendor[vendor.id] || [];
-            const productCount = vendorProducts.length;
-            const lowestPrice = vendorProducts.length > 0
-              ? Math.min(...vendorProducts.map((p) => p.price_cents))
-              : 0;
+            const vs = productsByVendor[vendor.id] || [];
+            const lowest = vs.length ? Math.min(...vs.map((p) => p.price_cents)) : 0;
 
             return (
               <Link
@@ -80,19 +77,16 @@ export default async function MarketPage() {
               >
                 <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-green-50 to-green-100">
                   {vendor.image_url ? (
-                    <Image
+                    <img
                       src={vendor.image_url}
                       alt={vendor.name}
-                      fill
-                      className="object-cover transition-transform group-hover:scale-105"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center">
                       <span className="text-6xl">🏪</span>
                     </div>
                   )}
-
                   {vendor.category && (
                     <div className="absolute left-3 top-3">
                       <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-700 backdrop-blur-sm">
@@ -106,26 +100,21 @@ export default async function MarketPage() {
                   <h3 className="mb-2 text-xl font-semibold text-gray-900 group-hover:text-green-600">
                     {vendor.name}
                   </h3>
-
                   <div className="flex items-center justify-between text-sm text-gray-600">
-                    <span>{productCount} {productCount === 1 ? "product" : "products"}</span>
-                    {lowestPrice > 0 && (
-                      <span className="font-medium text-green-700">
-                        From {money(lowestPrice)}
-                      </span>
-                    )}
+                    <span>{vs.length} {vs.length === 1 ? "product" : "products"}</span>
+                    {lowest > 0 && <span className="font-medium text-green-700">From {money(lowest)}</span>}
                   </div>
 
-                  {vendorProducts.length > 0 && (
+                  {!!vs.length && (
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {vendorProducts.slice(0, 3).map((product) => (
-                        <span key={product.id} className="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-700">
-                          {product.name}
+                      {vs.slice(0, 3).map((p) => (
+                        <span key={p.id} className="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-700">
+                          {p.name}
                         </span>
                       ))}
-                      {vendorProducts.length > 3 && (
+                      {vs.length > 3 && (
                         <span className="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-700">
-                          +{vendorProducts.length - 3} more
+                          +{vs.length - 3} more
                         </span>
                       )}
                     </div>
